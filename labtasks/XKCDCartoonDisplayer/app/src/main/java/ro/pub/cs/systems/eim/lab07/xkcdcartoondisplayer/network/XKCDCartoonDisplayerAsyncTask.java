@@ -1,12 +1,36 @@
 package ro.pub.cs.systems.eim.lab07.xkcdcartoondisplayer.network;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.ImageRequest;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+
+import cz.msebera.android.httpclient.HttpEntity;
+import cz.msebera.android.httpclient.HttpResponse;
+import cz.msebera.android.httpclient.client.HttpClient;
+import cz.msebera.android.httpclient.client.methods.HttpGet;
+import cz.msebera.android.httpclient.impl.client.DefaultHttpClient;
+import ro.pub.cs.systems.eim.lab07.xkcdcartoondisplayer.R;
 import ro.pub.cs.systems.eim.lab07.xkcdcartoondisplayer.entities.XKCDCartoonInformation;
+import ro.pub.cs.systems.eim.lab07.xkcdcartoondisplayer.general.Constants;
+import ro.pub.cs.systems.eim.lab07.xkcdcartoondisplayer.general.Utilities;
 
 public class XKCDCartoonDisplayerAsyncTask extends AsyncTask<String, Void, XKCDCartoonInformation> {
 
@@ -48,6 +72,23 @@ public class XKCDCartoonDisplayerAsyncTask extends AsyncTask<String, Void, XKCDC
         // - create an instance of a HttpGet object
         // - create an instance of a ResponseHandler object
         // - execute the request, thus obtaining the web page source code
+        HttpClient httpClient = new DefaultHttpClient();
+        HttpGet httpGet = new HttpGet(urls[0]);
+        String pageSourceCode = "";
+        try {
+            HttpResponse httpGetResponse = httpClient.execute(httpGet);
+            HttpEntity httpGetEntity = httpGetResponse.getEntity();
+            BufferedReader bufferedReader = Utilities.getReader(httpGetEntity);
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                pageSourceCode += line + "\n";
+            }
+        } catch (Exception exception) {
+            Log.e(Constants.TAG, exception.getMessage());
+            if (Constants.DEBUG) {
+                exception.printStackTrace();
+            }
+        }
 
         // 2. parse the web page source code
         // - cartoon title: get the tag whose id equals "ctitle"
@@ -71,8 +112,29 @@ public class XKCDCartoonDisplayerAsyncTask extends AsyncTask<String, Void, XKCDC
         //   * get the href attribute of the tag
         //   * prepend the value with the base url: http://www.xkcd.com
         //   * attach the next button a click listener with the address attached
+        Log.i(Constants.TAG, pageSourceCode);
+        Document document = Jsoup.parse(pageSourceCode);
+        Element htmlTag = document.child(0);
 
-        return  xkcdCartoonInformation;
+        Element divTagIdCtitle = htmlTag.getElementsByAttributeValue(Constants.ID_ATTRIBUTE, Constants.CTITLE_VALUE).first();
+        xkcdCartoonInformation.setCartoonTitle(divTagIdCtitle.ownText());
+
+        Element divTagIdComic = htmlTag.getElementsByAttributeValue(Constants.ID_ATTRIBUTE, Constants.COMIC_VALUE).first();
+        String cartoonInternetAddress = divTagIdComic.getElementsByTag(Constants.IMG_TAG).attr(Constants.SRC_ATTRIBUTE);
+
+        httpGet = new HttpGet(cartoonInternetAddress);
+        try {
+            HttpResponse httpGetResponse = httpClient.execute(httpGet);
+            HttpEntity httpGetEntity = httpGetResponse.getEntity();
+            Bitmap bitmap = BitmapFactory.decodeStream(httpGetEntity.getContent());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        Log.i(Constants.TAG, cartoonInternetAddress);
+
+        return xkcdCartoonInformation;
     }
 
     @Override
