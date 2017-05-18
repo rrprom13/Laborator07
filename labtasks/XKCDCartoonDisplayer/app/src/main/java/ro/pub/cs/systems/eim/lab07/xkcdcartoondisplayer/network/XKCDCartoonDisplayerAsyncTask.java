@@ -122,17 +122,24 @@ public class XKCDCartoonDisplayerAsyncTask extends AsyncTask<String, Void, XKCDC
         Element divTagIdComic = htmlTag.getElementsByAttributeValue(Constants.ID_ATTRIBUTE, Constants.COMIC_VALUE).first();
         String cartoonInternetAddress = divTagIdComic.getElementsByTag(Constants.IMG_TAG).attr(Constants.SRC_ATTRIBUTE);
 
+        cartoonInternetAddress = "http:" + cartoonInternetAddress;
         httpGet = new HttpGet(cartoonInternetAddress);
+        Log.i(Constants.TAG, cartoonInternetAddress);
         try {
             HttpResponse httpGetResponse = httpClient.execute(httpGet);
             HttpEntity httpGetEntity = httpGetResponse.getEntity();
-            Bitmap bitmap = BitmapFactory.decodeStream(httpGetEntity.getContent());
+            xkcdCartoonInformation.setCartoonBitmap(BitmapFactory.decodeStream(httpGetEntity.getContent()));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        Element aTagRelPrev = htmlTag.getElementsByAttributeValue(Constants.REL_ATTRIBUTE, Constants.PREVIOUS_VALUE).first();
+        String previousCartoonInternetAddress = Constants.XKCD_INTERNET_ADDRESS + aTagRelPrev.attr(Constants.HREF_ATTRIBUTE);
+        xkcdCartoonInformation.setPreviousCartoonUrl(previousCartoonInternetAddress);
 
-        Log.i(Constants.TAG, cartoonInternetAddress);
+        Element aTagRelNext = htmlTag.getElementsByAttributeValue(Constants.REL_ATTRIBUTE, Constants.NEXT_VALUE).first();
+        String nextCartoonInternetAddress = Constants.XKCD_INTERNET_ADDRESS + aTagRelNext.attr(Constants.HREF_ATTRIBUTE);
+        xkcdCartoonInformation.setNextCartoonUrl(nextCartoonInternetAddress);
 
         return xkcdCartoonInformation;
     }
@@ -148,7 +155,11 @@ public class XKCDCartoonDisplayerAsyncTask extends AsyncTask<String, Void, XKCDC
         // based on cartoonUrl fetch the bitmap using Volley (using an ImageRequest object added to the queue)
         // and put it into xkcdCartoonImageView
         // previousCartoonUrl, nextCartoonUrl -> set the XKCDCartoonUrlButtonClickListener for previousButton, nextButton
-
+        xkcdCartoonTitleTextView.setText(xkcdCartoonInformation.getCartoonTitle());
+        xkcdCartoonImageView.setImageBitmap(xkcdCartoonInformation.getCartoonBitmap());
+        xkcdCartoonUrlTextView.setText(xkcdCartoonInformation.getCartoonUrl());
+        previousButton.setOnClickListener(new XKCDCartoonButtonClickListener(xkcdCartoonInformation.getPreviousCartoonUrl()));
+        nextButton.setOnClickListener(new XKCDCartoonButtonClickListener(xkcdCartoonInformation.getNextCartoonUrl()));
     }
 
 }
